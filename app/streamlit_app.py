@@ -15,7 +15,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from ai.interpretar import MODELO, explicar, interpretar
+from ai.interpretar import explicar, interpretar
 from app import fuentes
 from app.verificador import APROXIMADA, CORRECTA, INCORRECTA, NO_VERIFICABLE, verificar
 
@@ -183,7 +183,7 @@ def mostrar(frase: str):
 - **Tolerancia:** {r['tolerancia']}
 - **Fecha de consulta:** {r['fecha_consulta']}
 - **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`
-- **Modelo:** {MODELO} · tokens usados: {tok1['total'] + tok2['total']} (interpretación {tok1['total']}, explicación {tok2['total']}) · explicación {'redactada por IA y revisada' if de_ia else 'de plantilla'}
+- **Modelo:** {tok1['modelo']} · tokens usados: {tok1['total'] + tok2['total']} (interpretación {tok1['total']}, explicación {tok2['total']}) · explicación {'redactada por IA y revisada' if de_ia else 'de plantilla'}
 """)
             if f.get("url_api"):
                 st.markdown(f"- **API:** {f['url_api']}")
@@ -192,7 +192,7 @@ def mostrar(frase: str):
         with st.expander("Ficha de trazabilidad"):
             st.markdown(f"- **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`\n"
                         f"- **Motivo:** {r.get('motivo')}\n- **Fecha de consulta:** {r['fecha_consulta']}\n"
-                        f"- **Modelo:** {MODELO} · tokens usados: {tok1['total'] + tok2['total']}")
+                        f"- **Modelo:** {tok1['modelo']} · tokens usados: {tok1['total'] + tok2['total']}")
         st.info("Fuentes disponibles: BCRP (inflación, PBI, tipo de cambio, tasa de referencia, ingresos "
                 "tributarios) e INEI ENAHO 2024 (pobreza y pobreza extrema).")
 

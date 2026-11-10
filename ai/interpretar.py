@@ -1,6 +1,7 @@
 """Gemini: (1) convierte la afirmación en una consulta estructurada y (2) redacta la explicación del veredicto.
 
-Mismo modelo y librería que en mi Tarea 2 (google-genai, gemini-3.8-flash, temperature=0, JSON con esquema).
+Mismo modelo y librería que en mi Tarea 2 (google-genai, gemini-3.8-flash, temperature=0, JSON con esquema);
+si Google lo tiene saturado (503) o sin cuota (429), respaldo automático con gemini-3.1-flash-lite.
 Gemini NO calcula ni aporta cifras: la comparación la hace app/verificador.py. La explicación se revisa en
 Python: si menciona un número que no está en los datos calculados, se descarta y se usa una plantilla.
 
@@ -20,7 +21,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 RAIZ = Path(__file__).resolve().parents[1]
-MODELO = "gemini-3.8-flash"
+MODELO = "gemini-3.8-flash"              # el de la Tarea 2
+MODELO_RESPALDO = "gemini-3.1-flash-lite"  # si el principal responde 503/429 (decidido con Antonio el 9/11)
 REGISTRO = RAIZ / "data" / "registro_tokens.csv"
 TIMEOUT_MS = 45_000      # sin timeout, una llamada lenta dejaba la app esperando indefinidamente
 
@@ -112,28 +114,37 @@ def _registrar(etapa: str, frase: str, uso: dict) -> None:
             w = csv.writer(f)
             if nuevo:
                 w.writerow(["fecha", "etapa", "modelo", "tokens_entrada", "tokens_salida", "tokens_total", "frase"])
-            w.writerow([datetime.now().isoformat(timespec="seconds"), etapa, MODELO, uso["entrada"],
+            w.writerow([datetime.now().isoformat(timespec="seconds"), etapa, uso["modelo"], uso["entrada"],
                         uso["salida"], uso["total"], frase[:200]])
     except OSError:
         pass          # en la nube el disco puede ser de solo lectura: el registro no debe romper la app
 
 
-def _llamar(prompt: str, esquema=None, intentos: int = 4):
+def _llamar(prompt: str, esquema=None):
+    """Llama al modelo principal; si Google responde 503/429 (saturación o cuota) usa el modelo de respaldo.
+
+    Devuelve (respuesta, uso) y uso["modelo"] dice qué modelo respondió (se muestra en la ficha de trazabilidad).
+    """
     from google.genai import errors, types
     cfg = types.GenerateContentConfig(temperature=0, **(
         {"response_mime_type": "application/json", "response_schema": esquema} if esquema else {}))
     cliente = _cliente()
-    for i in range(intentos):
-        try:
-            r = cliente.models.generate_content(model=MODELO, contents=prompt, config=cfg)
-            u = r.usage_metadata
-            uso = {"entrada": u.prompt_token_count or 0, "salida": u.candidates_token_count or 0,
-                   "total": u.total_token_count or 0}
-            return r, uso
-        except (errors.ServerError, errors.ClientError) as e:
-            if getattr(e, "code", None) not in (429, 503) or i == intentos - 1:
-                raise
-            time.sleep(2 * 2 ** i)          # 503 "high demand" de Google: reintentar 2, 4, 8 s
+    ultimo = None
+    for modelo, intentos in ((MODELO, 2), (MODELO_RESPALDO, 3)):
+        for i in range(intentos):
+            try:
+                r = cliente.models.generate_content(model=modelo, contents=prompt, config=cfg)
+                u = r.usage_metadata
+                uso = {"modelo": modelo, "entrada": u.prompt_token_count or 0,
+                       "salida": u.candidates_token_count or 0, "total": u.total_token_count or 0}
+                return r, uso
+            except (errors.ServerError, errors.ClientError) as e:
+                if getattr(e, "code", None) not in (429, 503):
+                    raise
+                ultimo = e
+                if i < intentos - 1:
+                    time.sleep(2 * 2 ** i)      # 503 "high demand" de Google: reintentar tras 2, 4 s
+    raise ultimo
 
 
 def interpretar(frase: str) -> tuple[dict, dict]:
@@ -156,7 +167,7 @@ def explicar(frase: str, datos: dict, plantilla: str) -> tuple[str, dict, bool]:
     try:
         r, uso = _llamar(PROMPT_EXPLICACION.format(frase=frase, datos=json.dumps(datos, ensure_ascii=False)))
     except Exception:
-        return plantilla, {"entrada": 0, "salida": 0, "total": 0}, False
+        return plantilla, {"modelo": "—", "entrada": 0, "salida": 0, "total": 0}, False
     _registrar("explicar", frase, uso)
     texto = (r.text or "").strip()
     permitidos = _numeros(json.dumps(datos, ensure_ascii=False)) | _numeros(frase)
