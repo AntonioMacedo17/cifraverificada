@@ -46,8 +46,10 @@ uv run python -m app.fuentes   # (opcional) actualizar el snapshot del BCRP
 
 ## Despliegue (Streamlit Community Cloud)
 
-- **URL pública:** *pendiente (se agrega al terminar el despliegue).*
-- Repo `AntonioMacedo17/cifraverificada`, rama `main`, archivo `app/streamlit_app.py`, Python 3.12.
+- **URL pública:** https://cifraverificada.streamlit.app
+- Repo `AntonioMacedo17/cifraverificada`, rama `main`, archivo `app/streamlit_app.py`.
+- **Python:** la nube corre con **3.14** (según el log de despliegue); en local se desarrolla con 3.12. Las pruebas pasan en ambas versiones (`uv run --isolated --python 3.14 --with pytest pytest -q`).
+- Si la ficha de trazabilidad dice "reglas en Python (sin IA)", la línea *Motivo del respaldo sin IA* indica la causa (503, 429, tiempo agotado, falta la clave en Secrets u otro error con su tipo).
 - La clave va en *Settings → Secrets* como `GEMINI_API_KEY = "..."` (nunca en el repositorio).
 - Dependencias: `uv.lock` (y `requirements.txt`, exportado del mismo lock con `uv export`).
 - En la nube `data/registro_tokens.csv` no persiste entre reinicios; si la API del BCRP no responde se

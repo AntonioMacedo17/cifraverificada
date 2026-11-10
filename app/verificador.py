@@ -165,7 +165,7 @@ def _detras_bcrp(ind: str, s: pd.Series, per: str, oficial: float, unidad: str) 
               {"concepto": f"Mínimo de la ventana ({s.idxmin()})", "valor": round(float(s.min()), 2)},
               {"concepto": f"Promedio {s.index[0]} a {s.index[-1]}", "valor": round(float(s.mean()), 2)},
               {"concepto": f"Último dato disponible ({s.index[-1]})", "valor": round(float(s.iloc[-1]), 2)}]
-    return filas
+    return [{**f, "unidad": unidad} for f in filas]
 
 
 def _buscar_fila(df: pd.DataFrame, ambito: str | None) -> pd.Series | None:
@@ -224,10 +224,11 @@ def _verificar_enaho(consulta: dict) -> dict:
 def _detras_enaho(df: pd.DataFrame, col: str) -> list[dict]:
     g = df.set_index("categoria")[col]
     deps = df[df.nivel == "departamento"].set_index("categoria")[col]
-    return [{"concepto": "Nacional (Perú)", "valor": g["Perú"]},
-            {"concepto": "Área rural", "valor": g["rural"]},
-            {"concepto": "Área urbana", "valor": g["urbana"]},
-            {"concepto": "Niñas y niños de 0 a 14 años", "valor": g["0-14"]},
-            {"concepto": f"Departamento más alto ({deps.idxmax()})", "valor": deps.max()},
-            {"concepto": f"Departamento más bajo ({deps.idxmin()})", "valor": deps.min()},
-            {"concepto": "Brecha rural - urbana (pp)", "valor": round(g["rural"] - g["urbana"], 2)}]
+    filas = [{"concepto": "Nacional (Perú)", "valor": g["Perú"]},
+             {"concepto": "Área rural", "valor": g["rural"]},
+             {"concepto": "Área urbana", "valor": g["urbana"]},
+             {"concepto": "Niñas y niños de 0 a 14 años", "valor": g["0-14"]},
+             {"concepto": f"Departamento más alto ({deps.idxmax()})", "valor": deps.max()},
+             {"concepto": f"Departamento más bajo ({deps.idxmin()})", "valor": deps.min()},
+             {"concepto": "Brecha rural - urbana", "valor": round(g["rural"] - g["urbana"], 2), "unidad": "pp"}]
+    return [{**f, "valor": round(float(f["valor"]), 2), "unidad": f.get("unidad", "%")} for f in filas]

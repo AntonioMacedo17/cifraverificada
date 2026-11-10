@@ -126,13 +126,24 @@ def geojson():
     return json.loads(fuentes.GEOJSON.read_text(encoding="utf-8"))
 
 
+def formato_valor(valor, unidad: str) -> str:
+    """27.53 -> "27.53 %"; 15.0 -> "15.0 pp". Máximo 2 decimales, mínimo 1."""
+    if valor is None:
+        return "—"
+    v = round(float(valor), 2)
+    txt = f"{v:.2f}" if round(v, 1) != v else f"{v:.1f}"
+    return f"{txt} {unidad}".strip()
+
+
 def mapa_enaho(r: dict):
     df = r["enaho"].query("nivel == 'departamento'")
     col = r["columna"]
     fig = px.choropleth(df, geojson=geojson(), locations="codigo", featureidkey="properties.FIRST_IDDP",
                         color=col, hover_name="categoria", color_continuous_scale="Blues",
                         labels={col: "%"}, hover_data={"codigo": False, col: ":.2f"})
-    fig.update_geos(fitbounds="locations", visible=False)
+    # Encuadre fijo del Perú completo (fitbounds sobre el geojson acercaba demasiado al cargar)
+    fig.update_geos(visible=False, projection_type="mercator", fitbounds=False,
+                    lonaxis_range=[-81.6, -68.4], lataxis_range=[-18.6, 0.2], center=dict(lon=-75.0, lat=-9.2))
     fig.update_layout(title=f"{r['indicador']} por departamento, ENAHO 2024", height=480,
                       margin=dict(l=0, r=0, t=50, b=0))
     st.plotly_chart(fig, width="stretch")
@@ -174,7 +185,8 @@ def mostrar(frase: str):
         st.subheader("La cifra detrás de la cifra")
         st.caption("Lo que el promedio esconde, calculado desde los mismos datos. Son contrastes descriptivos, "
                    "no relaciones de causa.")
-        st.table([{"Concepto": d["concepto"], "Valor": d["valor"]} for d in r["detras"]])
+        st.table([{"Concepto": d["concepto"], "Valor": formato_valor(d["valor"], d.get("unidad", r["unidad"]))}
+                  for d in r["detras"]])
 
         with st.expander("Ficha de trazabilidad"):
             st.markdown(f"""
@@ -186,7 +198,7 @@ def mostrar(frase: str):
 - **Fecha de consulta:** {r['fecha_consulta']}
 - **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`
 - **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']} (interpretación {tok1['total']}, explicación {tok2['total']}) · explicación {'redactada por IA y revisada' if de_ia else 'de plantilla'}
-""")
+""" + (f"- **Motivo del respaldo sin IA:** {tok1['motivo_respaldo']}\n" if tok1.get("motivo_respaldo") else ""))
             if f.get("url_api"):
                 st.markdown(f"- **API:** {f['url_api']}")
         st.markdown(f"**Fuente oficial:** [{f['url']}]({f['url']})")
@@ -194,7 +206,9 @@ def mostrar(frase: str):
         with st.expander("Ficha de trazabilidad"):
             st.markdown(f"- **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`\n"
                         f"- **Motivo:** {r.get('motivo')}\n- **Fecha de consulta:** {r['fecha_consulta']}\n"
-                        f"- **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']}")
+                        f"- **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']}"
+                        + (f"\n- **Motivo del respaldo sin IA:** {tok1['motivo_respaldo']}"
+                           if tok1.get("motivo_respaldo") else ""))
         st.info("Fuentes disponibles: BCRP (inflación, PBI, tipo de cambio, tasa de referencia, ingresos "
                 "tributarios) e INEI ENAHO 2024 (pobreza y pobreza extrema).")
 

@@ -135,7 +135,7 @@ def _llamar(prompt: str, esquema=None, limite_s: float = LIMITE_S):
         for i in range(intentos):
             restante = limite_s - (time.monotonic() - inicio)
             if restante < 1:
-                raise TimeoutError(f"Gemini no respondió en {limite_s:g} s ({ultimo!r})")
+                raise TimeoutError(f"Gemini no respondió en {limite_s:g} s") from ultimo
             try:
                 r = _cliente(restante).models.generate_content(model=modelo, contents=prompt, config=cfg)
                 u = r.usage_metadata
@@ -161,6 +161,45 @@ def interpretar(frase: str) -> tuple[dict, dict]:
     return c, uso
 
 
+def motivo_respaldo(e: BaseException | None) -> str:
+    """Motivo legible de por qué no respondió Gemini, para la ficha de trazabilidad. Nunca incluye la clave."""
+    if e is None:
+        return "error desconocido"
+    if isinstance(e, TimeoutError):
+        causa = e.__cause__
+        return f"tiempo agotado ({LIMITE_S} s)" + (f"; último error: {motivo_respaldo(causa)}" if causa else "")
+    if isinstance(e, RuntimeError) and "GEMINI_API_KEY" in str(e):
+        return "falta la clave GEMINI_API_KEY en Secrets"
+    if isinstance(e, ImportError):
+        return f"no se pudo cargar la librería de Gemini ({type(e).__name__}: {e})"
+    codigo = getattr(e, "code", None)
+    nombre = type(e).__name__
+    if codigo == 503:
+        return "Gemini saturado (503)"
+    if codigo == 429:
+        return "cuota agotada (429)"
+    if codigo in (400, 401, 403):
+        detalle = "clave inválida o sin permiso" if "key" in str(e).lower() or codigo != 400 else "solicitud rechazada"
+        texto = f"{detalle} ({codigo}, {nombre})"
+    elif codigo == 404:
+        texto = f"modelo no encontrado (404, {nombre})"
+    elif codigo is not None:
+        texto = f"error de la API de Gemini ({codigo}, {nombre})"
+    else:
+        texto = nombre
+    mensaje = str(e)
+    clave = None
+    try:
+        clave = _clave()
+    except Exception:
+        pass
+    if clave:
+        mensaje = mensaje.replace(clave, "***")
+    mensaje = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "***", mensaje)   # por si acaso: formato de las claves de Google
+    mensaje = " ".join(mensaje.split())[:200]
+    return f"{texto}: {mensaje}" if mensaje else texto
+
+
 def interpretar_con_respaldo(frase: str) -> tuple[dict | None, dict]:
     """Gemini primero; si falla tras los reintentos o pasan 15 s, reglas en Python (ai/reglas.py).
 
@@ -173,7 +212,7 @@ def interpretar_con_respaldo(frase: str) -> tuple[dict | None, dict]:
         from ai.reglas import interpretar_reglas
         return interpretar_reglas(frase), {"modelo": "—", "entrada": 0, "salida": 0, "total": 0,
                                            "interpretacion": "reglas en Python (sin IA)", "con_ia": False,
-                                           "error_ia": type(e).__name__}
+                                           "error_ia": type(e).__name__, "motivo_respaldo": motivo_respaldo(e)}
 
 
 def _numeros(texto: str) -> set[float]:
