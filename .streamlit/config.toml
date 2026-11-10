@@ -8,3 +8,26 @@ runOnSave = false
 
 [browser]
 gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+# Paleta «marfil» de la Tarea 3 y del sitio web: marfil, azul institucional y acento rojo.
+[theme]
+base = "light"
+primaryColor = "#1D4E89"
+backgroundColor = "#FAF7F0"
+secondaryBackgroundColor = "#F1EDE3"
+textColor = "#1C2433"
+linkColor = "#1D4E89"
+borderColor = "#E3E1DA"
+redColor = "#C8102E"
+blueColor = "#1D4E89"
+greenColor = "#1E7A4C"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+headingFont = "Fraunces:https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap, Georgia, serif"
+headingFontWeights = [700, 600, 600]
+baseFontSize = 16
+baseRadius = "0.6rem"
+metricValueFontSize = "1.9rem"
+chartCategoricalColors = ["#1D3A66", "#4A90D9", "#B8862A", "#8A9096", "#A9C8EC", "#7A8F3A"]
