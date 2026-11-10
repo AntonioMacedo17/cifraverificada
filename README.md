@@ -50,6 +50,11 @@ uv run python -m app.fuentes   # (opcional) actualizar el snapshot del BCRP
 - Repo `AntonioMacedo17/cifraverificada`, rama `main`, archivo `app/streamlit_app.py`.
 - **Python:** la nube corre con **3.14** (según el log de despliegue); en local se desarrolla con 3.12. Las pruebas pasan en ambas versiones (`uv run --isolated --python 3.14 --with pytest pytest -q`).
 - Si la ficha de trazabilidad dice "reglas en Python (sin IA)", la línea *Motivo del respaldo sin IA* indica la causa (503, 429, tiempo agotado, falta la clave en Secrets u otro error con su tipo).
+- `.streamlit/config.toml` desactiva la vigilancia de archivos (`fileWatcherType = "none"`): al recargar tras un
+  push, Streamlit sacaba el paquete `app` de `sys.modules` mientras otra sesión lo importaba (`KeyError: 'app'`).
+  Si tras un push la app no se actualiza, usar *Reboot app* en el panel de la nube.
+- Gemini: un intento de 10 s con `gemini-3.8-flash`; si da 429/500/503/504 o se agota, `gemini-3.1-flash-lite`
+  (la API rechaza plazos menores a 10 s). No se inicia un intento pasados 15 s; luego, reglas en Python.
 - La clave va en *Settings → Secrets* como `GEMINI_API_KEY = "..."` (nunca en el repositorio).
 - Dependencias: `uv.lock` (y `requirements.txt`, exportado del mismo lock con `uv export`).
 - En la nube `data/registro_tokens.csv` no persiste entre reinicios; si la API del BCRP no responde se

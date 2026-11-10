@@ -25,7 +25,8 @@ MODELO = "gemini-3.8-flash"              # el de la Tarea 2
 MODELO_RESPALDO = "gemini-3.1-flash-lite"  # si el principal responde 503/429 (decidido con Antonio el 9/11)
 REGISTRO = RAIZ / "data" / "registro_tokens.csv"
 TIMEOUT_MS = 15_000      # sin timeout, una llamada lenta dejaba la app esperando indefinidamente
-LIMITE_S = 15            # tiempo TOTAL para Gemini (con reintentos); después, reglas en Python (sin IA)
+LIMITE_S = 15            # no se inicia un intento nuevo pasado este tiempo; después, reglas en Python (sin IA)
+PLAZO_MIN_S = 10         # plazo mínimo por intento que acepta la API de Gemini (con menos responde 400)
 
 
 class Indicador(str, enum.Enum):
@@ -122,7 +123,9 @@ def _registrar(etapa: str, frase: str, uso: dict) -> None:
 
 
 def _llamar(prompt: str, esquema=None, limite_s: float = LIMITE_S):
-    """Llama al modelo principal; si Google responde 503/429 usa el de respaldo. Todo dentro de `limite_s` segundos.
+    """Llama al modelo principal (un intento de 10 s); si responde 429/500/503/504 o se agota, usa el de respaldo.
+
+    No se inicia un intento pasados `limite_s` segundos; cada intento pide al menos 10 s (mínimo de la API).
 
     Devuelve (respuesta, uso); uso["modelo"] dice qué modelo respondió. Si se agota el tiempo: TimeoutError.
     """
@@ -131,19 +134,26 @@ def _llamar(prompt: str, esquema=None, limite_s: float = LIMITE_S):
         {"response_mime_type": "application/json", "response_schema": esquema} if esquema else {}))
     inicio = time.monotonic()
     ultimo = None
-    for modelo, intentos in ((MODELO, 2), (MODELO_RESPALDO, 3)):
+    # Principal: un intento de PLAZO_MIN_S; si da 503/429 o se agota, se pasa enseguida al de respaldo.
+    for modelo, intentos in ((MODELO, 1), (MODELO_RESPALDO, 2)):
         for i in range(intentos):
             restante = limite_s - (time.monotonic() - inicio)
             if restante < 1:
                 raise TimeoutError(f"Gemini no respondió en {limite_s:g} s") from ultimo
+            # Google rechaza plazos < 10 s (400 "Minimum allowed deadline is 10s"): nunca se pide menos.
+            plazo = PLAZO_MIN_S if modelo == MODELO else max(PLAZO_MIN_S, restante)
             try:
-                r = _cliente(restante).models.generate_content(model=modelo, contents=prompt, config=cfg)
+                # El cliente vive en una variable durante toda la llamada: genai.Client.__del__ cierra el
+                # cliente HTTP compartido con .models, y con un temporal (_cliente(...).models...) la nube
+                # (Python 3.14) daba "Cannot send a request, as the client has been closed".
+                with _cliente(plazo) as cliente:
+                    r = cliente.models.generate_content(model=modelo, contents=prompt, config=cfg)
                 u = r.usage_metadata
                 uso = {"modelo": modelo, "entrada": u.prompt_token_count or 0,
                        "salida": u.candidates_token_count or 0, "total": u.total_token_count or 0}
                 return r, uso
             except (errors.ServerError, errors.ClientError) as e:
-                if getattr(e, "code", None) not in (429, 503):
+                if getattr(e, "code", None) not in (429, 500, 503, 504):   # transitorios: probar el respaldo
                     raise
                 ultimo = e
             except Exception as e:             # timeout de red u otro corte: seguir intentando dentro del límite

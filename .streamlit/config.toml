@@ -1,0 +1,10 @@
+# Configuración de Streamlit (local y nube). Nunca poner claves aquí: van en .streamlit/secrets.toml (ignorado).
+
+[server]
+# Sin vigilancia de archivos: al cambiar un .py, Streamlit sacaba de sys.modules el paquete `app` mientras otra
+# sesión lo importaba ("KeyError: 'app'" al recargar en la nube). Tras un push, reiniciar la app si no se actualiza.
+fileWatcherType = "none"
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
