@@ -24,7 +24,8 @@ RAIZ = Path(__file__).resolve().parents[1]
 MODELO = "gemini-3.8-flash"              # el de la Tarea 2
 MODELO_RESPALDO = "gemini-3.1-flash-lite"  # si el principal responde 503/429 (decidido con Antonio el 9/11)
 REGISTRO = RAIZ / "data" / "registro_tokens.csv"
-TIMEOUT_MS = 45_000      # sin timeout, una llamada lenta dejaba la app esperando indefinidamente
+TIMEOUT_MS = 15_000      # sin timeout, una llamada lenta dejaba la app esperando indefinidamente
+LIMITE_S = 15            # tiempo TOTAL para Gemini (con reintentos); después, reglas en Python (sin IA)
 
 
 class Indicador(str, enum.Enum):
@@ -98,13 +99,13 @@ def _clave() -> str | None:
     return os.environ.get("GEMINI_API_KEY")
 
 
-def _cliente():
+def _cliente(timeout_s: float = TIMEOUT_MS / 1000):
     from google import genai
+    from google.genai import types
     clave = _clave()
     if not clave:
         raise RuntimeError("Falta GEMINI_API_KEY (en .env o en los secrets de Streamlit).")
-    from google.genai import types
-    return genai.Client(api_key=clave, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
+    return genai.Client(api_key=clave, http_options=types.HttpOptions(timeout=max(1000, int(timeout_s * 1000))))
 
 
 def _registrar(etapa: str, frase: str, uso: dict) -> None:
@@ -120,20 +121,23 @@ def _registrar(etapa: str, frase: str, uso: dict) -> None:
         pass          # en la nube el disco puede ser de solo lectura: el registro no debe romper la app
 
 
-def _llamar(prompt: str, esquema=None):
-    """Llama al modelo principal; si Google responde 503/429 (saturación o cuota) usa el modelo de respaldo.
+def _llamar(prompt: str, esquema=None, limite_s: float = LIMITE_S):
+    """Llama al modelo principal; si Google responde 503/429 usa el de respaldo. Todo dentro de `limite_s` segundos.
 
-    Devuelve (respuesta, uso) y uso["modelo"] dice qué modelo respondió (se muestra en la ficha de trazabilidad).
+    Devuelve (respuesta, uso); uso["modelo"] dice qué modelo respondió. Si se agota el tiempo: TimeoutError.
     """
     from google.genai import errors, types
     cfg = types.GenerateContentConfig(temperature=0, **(
         {"response_mime_type": "application/json", "response_schema": esquema} if esquema else {}))
-    cliente = _cliente()
+    inicio = time.monotonic()
     ultimo = None
     for modelo, intentos in ((MODELO, 2), (MODELO_RESPALDO, 3)):
         for i in range(intentos):
+            restante = limite_s - (time.monotonic() - inicio)
+            if restante < 1:
+                raise TimeoutError(f"Gemini no respondió en {limite_s:g} s ({ultimo!r})")
             try:
-                r = cliente.models.generate_content(model=modelo, contents=prompt, config=cfg)
+                r = _cliente(restante).models.generate_content(model=modelo, contents=prompt, config=cfg)
                 u = r.usage_metadata
                 uso = {"modelo": modelo, "entrada": u.prompt_token_count or 0,
                        "salida": u.candidates_token_count or 0, "total": u.total_token_count or 0}
@@ -142,8 +146,10 @@ def _llamar(prompt: str, esquema=None):
                 if getattr(e, "code", None) not in (429, 503):
                     raise
                 ultimo = e
-                if i < intentos - 1:
-                    time.sleep(2 * 2 ** i)      # 503 "high demand" de Google: reintentar tras 2, 4 s
+            except Exception as e:             # timeout de red u otro corte: seguir intentando dentro del límite
+                ultimo = e
+            if i < intentos - 1:
+                time.sleep(min(2 * 2 ** i, max(0, limite_s - (time.monotonic() - inicio) - 1)))
     raise ultimo
 
 
@@ -153,6 +159,21 @@ def interpretar(frase: str) -> tuple[dict, dict]:
     _registrar("interpretar", frase, uso)
     c = Consulta.model_validate_json(r.text).model_dump(mode="json")
     return c, uso
+
+
+def interpretar_con_respaldo(frase: str) -> tuple[dict | None, dict]:
+    """Gemini primero; si falla tras los reintentos o pasan 15 s, reglas en Python (ai/reglas.py).
+
+    uso["interpretacion"] dice quién interpretó; consulta = None si ninguna de las dos reconoce la frase.
+    """
+    try:
+        c, uso = interpretar(frase)
+        return c, {**uso, "interpretacion": f"Gemini (modelo {uso['modelo']})", "con_ia": True}
+    except Exception as e:
+        from ai.reglas import interpretar_reglas
+        return interpretar_reglas(frase), {"modelo": "—", "entrada": 0, "salida": 0, "total": 0,
+                                           "interpretacion": "reglas en Python (sin IA)", "con_ia": False,
+                                           "error_ia": type(e).__name__}
 
 
 def _numeros(texto: str) -> set[float]:

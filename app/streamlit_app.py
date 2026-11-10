@@ -15,7 +15,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from ai.interpretar import explicar, interpretar
+from ai.interpretar import explicar, interpretar_con_respaldo
 from app import fuentes
 from app.verificador import APROXIMADA, CORRECTA, INCORRECTA, NO_VERIFICABLE, verificar
 
@@ -140,15 +140,17 @@ def mapa_enaho(r: dict):
 
 def mostrar(frase: str):
     with st.spinner("Interpretando la afirmación con Gemini…"):
-        try:
-            consulta, tok1 = interpretar(frase)
-        except Exception as e:
-            st.error(f"No pude interpretar la afirmación con Gemini ({type(e).__name__}). Intenta de nuevo.")
-            return
+        consulta, tok1 = interpretar_con_respaldo(frase)
+    if consulta is None:
+        st.warning("No pude interpretar la frase ahora; intenta de nuevo o usa un ejemplo.")
+        return
     with st.spinner("Consultando el dato oficial…"):
         r = verificar(consulta, en_vivo=True)
     with st.spinner("Redactando la explicación…"):
-        texto, tok2, de_ia = explicar(frase, datos_para_explicar(r), plantilla(r))
+        if tok1["con_ia"]:
+            texto, tok2, de_ia = explicar(frase, datos_para_explicar(r), plantilla(r))
+        else:                                   # Gemini no disponible: explicación de plantilla, sin esperar
+            texto, tok2, de_ia = plantilla(r), {"total": 0}, False
 
     tarjeta(r, frase)
     st.write(texto)
@@ -183,7 +185,7 @@ def mostrar(frase: str):
 - **Tolerancia:** {r['tolerancia']}
 - **Fecha de consulta:** {r['fecha_consulta']}
 - **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`
-- **Modelo:** {tok1['modelo']} · tokens usados: {tok1['total'] + tok2['total']} (interpretación {tok1['total']}, explicación {tok2['total']}) · explicación {'redactada por IA y revisada' if de_ia else 'de plantilla'}
+- **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']} (interpretación {tok1['total']}, explicación {tok2['total']}) · explicación {'redactada por IA y revisada' if de_ia else 'de plantilla'}
 """)
             if f.get("url_api"):
                 st.markdown(f"- **API:** {f['url_api']}")
@@ -192,7 +194,7 @@ def mostrar(frase: str):
         with st.expander("Ficha de trazabilidad"):
             st.markdown(f"- **Consulta interpretada por IA:** `{json.dumps(r['consulta'], ensure_ascii=False)}`\n"
                         f"- **Motivo:** {r.get('motivo')}\n- **Fecha de consulta:** {r['fecha_consulta']}\n"
-                        f"- **Modelo:** {tok1['modelo']} · tokens usados: {tok1['total'] + tok2['total']}")
+                        f"- **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']}")
         st.info("Fuentes disponibles: BCRP (inflación, PBI, tipo de cambio, tasa de referencia, ingresos "
                 "tributarios) e INEI ENAHO 2024 (pobreza y pobreza extrema).")
 
