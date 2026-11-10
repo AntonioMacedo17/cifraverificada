@@ -145,11 +145,11 @@ def _comparar(consulta: dict, oficial: float, tol: str) -> dict:
                 "diferencia": None, "tolerancia": "—"}
     if tipo == "mayor_que":
         v = CORRECTA if oficial > af else INCORRECTA
-        return {"veredicto": v, "diferencia": round(oficial - af, 4),
+        return {"veredicto": v, "diferencia": round(af - oficial, 4),
                 "tolerancia": f"Umbral: se afirma que el dato supera {af:g}; se compara el dato oficial con el umbral."}
     if tipo == "menor_que":
         v = CORRECTA if oficial < af else INCORRECTA
-        return {"veredicto": v, "diferencia": round(oficial - af, 4),
+        return {"veredicto": v, "diferencia": round(af - oficial, 4),
                 "tolerancia": f"Umbral: se afirma que el dato es menor que {af:g}; se compara el dato oficial con el umbral."}
     v, extra = clasificar(af, oficial, tol)
     return {"veredicto": v, **extra}

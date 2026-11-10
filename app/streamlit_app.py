@@ -118,7 +118,7 @@ def grafico_bcrp(r: dict):
     fig.update_layout(title=f"{r['fuente']['nombre']} ({r['fuente']['codigo']})", height=360, showlegend=False,
                       margin=dict(l=10, r=10, t=50, b=10), plot_bgcolor="white", yaxis_title=r["unidad"],
                       xaxis=dict(showgrid=False), yaxis=dict(gridcolor="#eee"))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 @st.cache_data
@@ -135,7 +135,7 @@ def mapa_enaho(r: dict):
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(title=f"{r['indicador']} por departamento, ENAHO 2024", height=480,
                       margin=dict(l=0, r=0, t=50, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def mostrar(frase: str):
@@ -160,8 +160,8 @@ def mostrar(frase: str):
         af = r["consulta"].get("valor_afirmado")
         c1.metric("Dato afirmado", f"{af:g}" if af is not None else "—")
         c2.metric(f"Dato oficial ({r['periodo_usado']})", f"{r['oficial']:.2f}")
-        c3.metric("Diferencia", f"{r['diferencia']:+.2f}" if r.get("diferencia") is not None else "—")
-        st.caption(f"Unidad: {r['unidad']} · {r['indicador']}"
+        c3.metric("Diferencia (afirmado − oficial)", f"{r['diferencia']:+.2f}" if r.get("diferencia") is not None else "—")
+        st.caption(f"Valor oficial exacto: {r['oficial']:g} · Unidad: {r['unidad']} · {r['indicador']}"
                    + (f" · ámbito: {r['ambito_usado']}" if r.get("ambito_usado") else ""))
 
         if f["tipo"] == "BCRP":
