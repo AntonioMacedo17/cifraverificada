@@ -1,0 +1,14 @@
+# Secretos
+.env
+.streamlit/secrets.toml
+# Entorno y cachés
+.venv/
+__pycache__/
+.pytest_cache/
+data/cache_api/
+# Datos pesados / microdatos (nunca se versionan)
+*.zip
+*.parquet
+*.sav
+*.dta
+data/raw/
