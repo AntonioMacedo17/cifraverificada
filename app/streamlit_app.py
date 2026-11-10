@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from ai.interpretar import explicar, interpretar_con_respaldo
-from app import fuentes
+from app import fuentes, orientacion
 from app.verificador import APROXIMADA, CORRECTA, INCORRECTA, NO_VERIFICABLE, verificar
 
 st.set_page_config(page_title="CifraVerificada", page_icon="✔", layout="centered")
@@ -91,6 +91,9 @@ def datos_para_explicar(r: dict) -> dict:
     claves = ["veredicto", "indicador", "oficial", "periodo_usado", "unidad", "diferencia", "metodo", "motivo",
               "ranking", "ambito_usado"]
     d = {k: r[k] for k in claves if r.get(k) is not None}
+    for k in ("valor_afirmado", "cifra_implicita", "tipo"):      # p. ej. «ya no hay pobres» = 0 %
+        if r.get("consulta", {}).get(k) is not None:
+            d[k] = r["consulta"][k]
     d["fuente"] = r.get("fuente", {}).get("codigo")
     return d
 
@@ -174,6 +177,10 @@ def mostrar(frase: str):
         c1.metric("Dato afirmado", f"{af:g}" if af is not None else "—")
         c2.metric(f"Dato oficial ({r['periodo_usado']})", f"{r['oficial']:.2f}")
         c3.metric("Diferencia (afirmado − oficial)", f"{r['diferencia']:+.2f}" if r.get("diferencia") is not None else "—")
+        if r["consulta"].get("cifra_implicita"):
+            st.caption(f"Cifra implícita en la frase: «{r['consulta']['cifra_implicita']}» se lee como "
+                       f"{'más de ' if r['consulta'].get('tipo') == 'mayor_que' else 'menos de ' if r['consulta'].get('tipo') == 'menor_que' else ''}"
+                       f"{af:g} %.")
         st.caption(f"Valor oficial exacto: {r['oficial']:g} · Unidad: {r['unidad']} · {r['indicador']}"
                    + (f" · ámbito: {r['ambito_usado']}" if r.get("ambito_usado") else ""))
 
@@ -209,8 +216,19 @@ def mostrar(frase: str):
                         f"- **Interpretación:** {tok1['interpretacion']} · tokens usados: {tok1['total'] + tok2['total']}"
                         + (f"\n- **Motivo del respaldo sin IA:** {tok1['motivo_respaldo']}"
                            if tok1.get("motivo_respaldo") else ""))
+        if r["consulta"].get("indicador") == "no_disponible":
+            seccion_orientacion(orientacion.enlaces_para(r["consulta"].get("tema_orientacion")))
         st.info("Fuentes disponibles: BCRP (inflación, PBI, tipo de cambio, tasa de referencia, ingresos "
                 "tributarios) e INEI ENAHO 2024 (pobreza y pobreza extrema).")
+
+
+def seccion_orientacion(o: dict):
+    """Enlaces de la lista fija data/fuentes_orientacion.json (la IA solo eligió el tema)."""
+    st.subheader("Para profundizar en fuentes oficiales")
+    st.write(o["texto"])
+    st.markdown("\n".join(f"- **{e['institucion']}** · [{e['nombre']}]({e['url']})" for e in o["enlaces"]))
+    st.caption(f"Tema: {o['etiqueta']}. Lista curada y fija (enlaces verificados el {o['verificado']}); "
+               "no la genera la IA.")
 
 
 if (enviado or st.session_state.pop("ejecutar", False)) and st.session_state.frase.strip():

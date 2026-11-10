@@ -34,7 +34,13 @@ def test_patrones(frase, campos):
     assert c is not None and {k: c[k] for k in campos} == campos
 
 
-@pytest.mark.parametrize("frase", ["El desempleo en Lima es 7 %", "La anemia infantil bajó", "La pobreza es alta"])
+@pytest.mark.parametrize("frase", ["El desempleo en Lima es 7 %", "La anemia infantil bajó"])
+def test_tema_sin_indicador_no_inventa(frase):
+    c = interpretar_reglas(frase)          # tema sin indicador: solo se elige el tema de orientación
+    assert c["indicador"] == "no_disponible" and c["valor_afirmado"] is None and c["tema_orientacion"]
+
+
+@pytest.mark.parametrize("frase", ["La pobreza es alta", "Hoy hace calor"])
 def test_no_reconoce_no_inventa(frase):
     assert interpretar_reglas(frase) is None
 

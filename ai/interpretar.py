@@ -20,6 +20,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
+from app import orientacion
+
 RAIZ = Path(__file__).resolve().parents[1]
 MODELO = "gemini-3.8-flash"              # el de la Tarea 2
 MODELO_RESPALDO = "gemini-3.1-flash-lite"  # si el principal responde 503/429 (decidido con Antonio el 9/11)
@@ -48,6 +50,10 @@ class Tipo(str, enum.Enum):
     minimo = "minimo"
 
 
+# Temas de orientación: SOLO las claves de data/fuentes_orientacion.json (la IA elige el tema; Python, los enlaces)
+Tema = enum.Enum("Tema", {k: k for k in orientacion.temas()}, type=str)
+
+
 class Consulta(BaseModel):
     indicador: Indicador
     ambito: str | None = Field(description="nacional, rural, urbana, hombre, mujer, 0-14, 15-29, 30-44, 45-59, "
@@ -56,6 +62,10 @@ class Consulta(BaseModel):
     tipo: Tipo
     valor_afirmado: float | None = Field(description="la cifra tal como aparece en la frase; null si no hay")
     unidad: str | None
+    cifra_implicita: str | None = Field(default=None, description="si la cifra no está escrita sino implícita "
+                                        "(«no hay pobres» = 0; «la mayoría» = más de 50), la expresión de la frase")
+    tema_orientacion: Tema | None = Field(default=None, description="solo si indicador = no_disponible: el tema "
+                                          "de la lista más cercano a la frase")
 
 
 PROMPT = """Eres el intérprete de un verificador de cifras del Perú. Convierte la afirmación en una consulta.
@@ -78,6 +88,14 @@ ambito: para pobreza usa nacional (Perú), rural, urbana, hombre, mujer, 0-14 (n
 60 y más, o el nombre del departamento. Si no se menciona, "nacional".
 periodo: "AAAA" o "AAAA-MM" solo si la frase lo menciona; si no, null.
 valor_afirmado: el número tal cual (20 % -> 20; 1.97 % -> 1.97; S/ 3.75 -> 3.75).
+Cifras implícitas (sin número escrito): si la frase NIEGA la existencia del fenómeno («no existe pobreza en el
+Perú», «ya no hay pobres», «la pobreza desapareció», «se erradicó la pobreza») -> tipo "valor", valor_afirmado 0,
+unidad "%". «La mayoría de peruanos es pobre» / «más de la mitad» -> tipo "mayor_que", valor_afirmado 50, unidad
+"%"; «menos de la mitad» / «una minoría» -> tipo "menor_que", valor_afirmado 50. En esos casos copia en
+cifra_implicita la expresión de la frase (p. ej. "ya no hay pobres"); si la cifra está escrita, cifra_implicita = null.
+tema_orientacion: si indicador = no_disponible, elige el tema más cercano de esta lista (clave exacta); si
+ninguno encaja, "general". Si el indicador es otro, null.
+{temas}
 
 Afirmación: «{frase}»"""
 
@@ -165,9 +183,12 @@ def _llamar(prompt: str, esquema=None, limite_s: float = LIMITE_S):
 
 def interpretar(frase: str) -> tuple[dict, dict]:
     """Frase -> (consulta dict, tokens usados)."""
-    r, uso = _llamar(PROMPT.format(frase=frase), Consulta)
+    temas = "\n".join(f"- {k}: {v['etiqueta']}" for k, v in orientacion.cargar()["temas"].items())
+    r, uso = _llamar(PROMPT.format(frase=frase, temas=temas), Consulta)
     _registrar("interpretar", frase, uso)
     c = Consulta.model_validate_json(r.text).model_dump(mode="json")
+    if c["indicador"] != "no_disponible":
+        c["tema_orientacion"] = None             # la orientación solo aplica a temas sin indicador
     return c, uso
 
 

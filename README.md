@@ -31,6 +31,14 @@ Python: si menciona un número que no está en los datos calculados, se reemplaz
 | Ingresos tributarios del gobierno general (% del PBI) | BCRP | PM05876FA |
 | Pobreza y pobreza extrema 2024 (nacional, área, sexo, edad, 25 departamentos) | INEI, ENAHO 2024 | personas ponderadas con `facpob07` |
 
+**Frases sin cifra explícita.** Las negaciones se leen como una cifra implícita (*"ya no hay pobres"*,
+*"la pobreza desapareció"* → 0 %; *"la mayoría de peruanos es pobre"* → más del 50 %) y se contrastan con la
+ENAHO; la ficha muestra la expresión usada. Si el tema no tiene indicador (democracia, corrupción, educación,
+salud, empleo…), el veredicto es *NO VERIFICABLE CON ESTAS FUENTES* y se sugieren 2-4 fuentes oficiales de una
+**lista fija y curada** (`data/fuentes_orientacion.json`, prioridad al sistema de la ONU: CEPAL, PNUD, ONU/ODS,
+OMS, UNESCO, UNODC, UNICEF; luego INEI, BCRP y MEF). La IA solo elige el tema; los enlaces los pone Python.
+Re-verificar los enlaces: `uv run python -m app.orientacion` (solo se incluyen los que responden HTTP 200).
+
 La pobreza nacional calculada es 27.53 % frente al 27.6 % oficial del INEI (diferencia de método).
 El repositorio solo contiene agregados: **ningún microdato**.
 

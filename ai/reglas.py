@@ -6,7 +6,7 @@ frase devuelve None (la app dice "No pude interpretar la frase ahora"): nunca ad
 import re
 import unicodedata
 
-from app import fuentes
+from app import fuentes, orientacion
 
 MESES = {"enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
          "septiembre": 9, "setiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12}
@@ -24,6 +24,13 @@ MAYOR = ("mas de", "mas del", "supera", "por encima", "mayor a", "mayor al", "ma
 MENOR = ("menos de", "menos del", "por debajo", "menor a", "menor al", "menor que")
 MAXIMO = ("mas pobre", "mas alto", "mas alta", "mayor pobreza", "mayor tasa")
 MINIMO = ("menos pobre", "mas bajo", "mas baja", "menor pobreza", "menor tasa")
+# Cifras implícitas (solo pobreza): negar el fenómeno = 0 %; "la mayoría" = más del 50 %.
+NIEGA = [r"\bno (existe|existen|hay|queda|quedan)\b.*?\bpobre\w*", r"\bya no hay\b.*?\bpobre\w*",
+         r"\bpobreza (ya )?(desaparecio|ha desaparecido|se acabo|se termino|se erradico|fue erradicada|es cero)",
+         r"\b(erradico|erradicamos|elimino|eliminamos|acabo con|acabamos con|se acabo) la pobreza",
+         r"\b(nadie|ningun peruano|ninguna persona) es pobre", r"\bcero pobres\b", r"\bsin pobreza\b"]
+MAYORIA = (r"\bla mayoria\b", r"\bmas de la mitad\b", r"\bla mayor parte\b")
+MINORIA = (r"\bmenos de la mitad\b", r"\buna minoria\b")
 AMBITOS = [("rural", "rural"), ("urban", "urbana"), ("nin", "0-14"), ("infancia", "0-14"), ("infantil", "0-14"),
            ("mujer", "mujer"), ("hombre", "hombre"), ("adultos mayores", "60 y más")]
 
@@ -41,7 +48,11 @@ def interpretar_reglas(frase: str) -> dict | None:
     t = _norm(frase)
     indicador = next((k for k, claves in INDICADORES if any(c in t for c in claves)), None)
     if indicador is None:
-        return None
+        tema = orientacion.tema_por_palabras(frase)      # tema sin indicador: orientar con la lista fija
+        if tema is None:
+            return None
+        return {"indicador": "no_disponible", "ambito": None, "periodo": None, "tipo": "valor",
+                "valor_afirmado": None, "unidad": None, "cifra_implicita": None, "tema_orientacion": tema}
 
     anio = re.search(r"\b(19[5-9]\d|20[0-4]\d)\b", t)
     periodo = anio[1] if anio else None
@@ -58,6 +69,17 @@ def interpretar_reglas(frase: str) -> dict | None:
     if indicador.startswith("pobreza"):
         ambito = dep or next((a for clave, a in AMBITOS if clave in t), "nacional")
 
+    implicita = None
+    if valor is None and indicador.startswith("pobreza"):
+        for patrones, tipo_imp, v in ((NIEGA, "valor", 0.0), (MINORIA, "menor_que", 50.0), (MAYORIA, "mayor_que", 50.0)):
+            m = next((re.search(p, t) for p in patrones if re.search(p, t)), None)
+            if m:
+                implicita, valor = m[0], v
+                break
+    if implicita is not None:
+        return {"indicador": indicador, "ambito": ambito, "periodo": periodo, "tipo": tipo_imp,
+                "valor_afirmado": valor, "unidad": "%", "cifra_implicita": implicita, "tema_orientacion": None}
+
     if any(c in t for c in MAXIMO) and dep and valor is None:
         tipo = "maximo"
     elif any(c in t for c in MINIMO) and dep and valor is None:
@@ -71,4 +93,5 @@ def interpretar_reglas(frase: str) -> dict | None:
     else:
         tipo = "valor"
     return {"indicador": indicador, "ambito": ambito, "periodo": periodo, "tipo": tipo,
-            "valor_afirmado": valor, "unidad": "%" if "%" in frase or "por ciento" in t else None}
+            "valor_afirmado": valor, "unidad": "%" if "%" in frase or "por ciento" in t else None,
+            "cifra_implicita": None, "tema_orientacion": None}

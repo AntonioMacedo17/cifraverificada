@@ -1,0 +1,40 @@
+{
+  "descripcion": "Lista FIJA y curada de fuentes oficiales para orientar cuando una afirmación no es verificable con los indicadores de CifraVerificada. La IA solo elige el TEMA; los enlaces los pone Python desde este archivo. Prioridad: sistema de la ONU (CEPAL, PNUD, ONU/ODS y agencias), luego INEI, BCRP y MEF.",
+  "verificado": "2026-11-10",
+  "metodo_verificacion": "GET con httpx (redirecciones seguidas, timeout 25 s): solo se incluyen enlaces con respuesta HTTP 200. Re-verificar con: uv run python -m app.orientacion",
+  "excluidos_no_verificables": {
+    "https://www.cepal.org/es/publicaciones/ps": "Panorama Social (CEPAL): 403 de Cloudflare a clientes automatizados; incluir solo si se confirma manualmente",
+    "https://ilostat.ilo.org/es/": "ILOSTAT (OIT): 403 de Cloudflare a clientes automatizados"
+  },
+  "enlaces": {
+    "cepalstat": {"nombre": "CEPALSTAT: bases de datos y publicaciones estadísticas", "institucion": "CEPAL", "sistema": "ONU", "url": "https://statistics.cepal.org/portal/cepalstat/index.html?lang=es"},
+    "cepal_dds": {"nombre": "Observatorio de Desarrollo Social de América Latina y el Caribe", "institucion": "CEPAL", "sistema": "ONU", "url": "https://dds.cepal.org/observatorio/"},
+    "pnud_idh": {"nombre": "Informe sobre Desarrollo Humano: datos por país", "institucion": "PNUD", "sistema": "ONU", "url": "https://hdr.undp.org/data-center"},
+    "pnud_peru": {"nombre": "PNUD Perú", "institucion": "PNUD", "sistema": "ONU", "url": "https://www.undp.org/es/peru"},
+    "ods_onu": {"nombre": "Objetivos de Desarrollo Sostenible", "institucion": "Naciones Unidas", "sistema": "ONU", "url": "https://www.un.org/sustainabledevelopment/es/"},
+    "ods_datos": {"nombre": "Portal de datos de los indicadores ODS", "institucion": "Naciones Unidas (UNSD)", "sistema": "ONU", "url": "https://unstats.un.org/sdgs/dataportal"},
+    "oms_peru": {"nombre": "Datos de salud del Perú", "institucion": "OMS", "sistema": "ONU", "url": "https://data.who.int/countries/604"},
+    "unesco_uis": {"nombre": "Instituto de Estadística de la UNESCO", "institucion": "UNESCO", "sistema": "ONU", "url": "https://uis.unesco.org/"},
+    "unodc_datos": {"nombre": "Datos sobre delito, justicia y corrupción", "institucion": "UNODC", "sistema": "ONU", "url": "https://dataunodc.un.org/"},
+    "unicef_peru": {"nombre": "UNICEF Perú", "institucion": "UNICEF", "sistema": "ONU", "url": "https://www.unicef.org/peru/"},
+    "inei": {"nombre": "Instituto Nacional de Estadística e Informática", "institucion": "INEI", "sistema": "Perú", "url": "https://www.gob.pe/inei/"},
+    "inei_tematico": {"nombre": "Estadísticas por tema (índice temático)", "institucion": "INEI", "sistema": "Perú", "url": "https://www.inei.gob.pe/estadisticas/indice-tematico/"},
+    "inei_ods": {"nombre": "Sistema de monitoreo de los indicadores ODS en el Perú", "institucion": "INEI", "sistema": "Perú", "url": "https://ods.inei.gob.pe/"},
+    "bcrp_series": {"nombre": "Series estadísticas del BCRP", "institucion": "BCRP", "sistema": "Perú", "url": "https://estadisticas.bcrp.gob.pe/estadisticas/series/"},
+    "mef_consulta": {"nombre": "Consulta Amigable: ejecución del presupuesto público", "institucion": "MEF", "sistema": "Perú", "url": "https://apps5.mineco.gob.pe/transparencia/Navegador/default.aspx"}
+  },
+  "temas": {
+    "democracia": {"etiqueta": "Democracia, instituciones y elecciones", "palabras_clave": ["democraci", "dictadura", "elecci", "congreso", "instituciones", "estado de derecho", "voto", "autoritari"], "enlaces": ["ods_onu", "ods_datos", "pnud_peru", "inei_ods"]},
+    "corrupcion": {"etiqueta": "Corrupción y transparencia", "palabras_clave": ["corrup", "soborno", "coima", "transparencia", "lavado de activos"], "enlaces": ["unodc_datos", "ods_datos", "mef_consulta", "inei_ods"]},
+    "educacion": {"etiqueta": "Educación", "palabras_clave": ["educaci", "escuela", "colegio", "universidad", "analfabet", "escolar", "estudiante", "docente", "maestro"], "enlaces": ["unesco_uis", "cepalstat", "inei_tematico"]},
+    "salud": {"etiqueta": "Salud y nutrición", "palabras_clave": ["salud", "anemia", "desnutrici", "hospital", "mortalidad", "vacun", "enfermedad", "medico"], "enlaces": ["oms_peru", "cepalstat", "inei_tematico"]},
+    "empleo": {"etiqueta": "Empleo, salarios e informalidad", "palabras_clave": ["empleo", "desemple", "trabajo", "salario", "sueldo", "informal", "remuneraci"], "enlaces": ["cepalstat", "ods_datos", "inei_tematico"]},
+    "seguridad": {"etiqueta": "Seguridad ciudadana y delito", "palabras_clave": ["delincuen", "delito", "crimen", "inseguridad", "seguridad ciudadana", "homicidio", "extorsi", "robo", "sicariato"], "enlaces": ["unodc_datos", "ods_datos", "inei_tematico"]},
+    "medio_ambiente": {"etiqueta": "Medio ambiente y clima", "palabras_clave": ["ambient", "clima", "deforestaci", "contaminaci", "emisiones", "mineria ilegal", "agua potable"], "enlaces": ["ods_datos", "cepalstat", "inei_ods"]},
+    "genero": {"etiqueta": "Igualdad de género", "palabras_clave": ["genero", "feminicid", "violencia contra la mujer", "brecha salarial", "igualdad entre"], "enlaces": ["cepalstat", "pnud_idh", "ods_datos", "inei_tematico"]},
+    "ninez": {"etiqueta": "Niñez y adolescencia", "palabras_clave": ["trabajo infantil", "adolescen", "embarazo adolescente"], "enlaces": ["unicef_peru", "cepal_dds", "inei_tematico"]},
+    "desarrollo_humano": {"etiqueta": "Desarrollo humano y desigualdad", "palabras_clave": ["desarrollo humano", "desigualdad", "gini", "calidad de vida", "bienestar", "clase media"], "enlaces": ["pnud_idh", "cepal_dds", "pnud_peru", "inei"]},
+    "finanzas_publicas": {"etiqueta": "Presupuesto, gasto y deuda pública", "palabras_clave": ["presupuesto", "gasto publico", "deuda", "deficit fiscal", "inversion publica", "canon"], "enlaces": ["cepalstat", "mef_consulta", "bcrp_series"]},
+    "general": {"etiqueta": "Otros temas", "palabras_clave": [], "enlaces": ["cepalstat", "ods_datos", "pnud_idh", "inei"]}
+  }
+}
