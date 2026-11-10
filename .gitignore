@@ -12,3 +12,4 @@ data/cache_api/
 *.sav
 *.dta
 data/raw/
+data/registro_tokens.csv
