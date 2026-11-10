@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 RAIZ = Path(__file__).resolve().parents[1]
 MODELO = "gemini-3.8-flash"
 REGISTRO = RAIZ / "data" / "registro_tokens.csv"
+TIMEOUT_MS = 45_000      # sin timeout, una llamada lenta dejaba la app esperando indefinidamente
 
 
 class Indicador(str, enum.Enum):
@@ -100,7 +101,8 @@ def _cliente():
     clave = _clave()
     if not clave:
         raise RuntimeError("Falta GEMINI_API_KEY (en .env o en los secrets de Streamlit).")
-    return genai.Client(api_key=clave)
+    from google.genai import types
+    return genai.Client(api_key=clave, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
 
 
 def _registrar(etapa: str, frase: str, uso: dict) -> None:
@@ -116,7 +118,7 @@ def _registrar(etapa: str, frase: str, uso: dict) -> None:
         pass          # en la nube el disco puede ser de solo lectura: el registro no debe romper la app
 
 
-def _llamar(prompt: str, esquema=None, intentos: int = 3):
+def _llamar(prompt: str, esquema=None, intentos: int = 4):
     from google.genai import errors, types
     cfg = types.GenerateContentConfig(temperature=0, **(
         {"response_mime_type": "application/json", "response_schema": esquema} if esquema else {}))
@@ -131,7 +133,7 @@ def _llamar(prompt: str, esquema=None, intentos: int = 3):
         except (errors.ServerError, errors.ClientError) as e:
             if getattr(e, "code", None) not in (429, 503) or i == intentos - 1:
                 raise
-            time.sleep(3 * 2 ** i)
+            time.sleep(2 * 2 ** i)          # 503 "high demand" de Google: reintentar 2, 4, 8 s
 
 
 def interpretar(frase: str) -> tuple[dict, dict]:
