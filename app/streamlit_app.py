@@ -102,8 +102,9 @@ CSS = """
   .cv-aviso {font-size: .84rem; color: TINTA_2; background: #F1EDE3; border-radius: .6rem; padding: .75rem 1rem;
              line-height: 1.5;}
   @media (max-width: 640px) {
-    .block-container {padding-left: 1rem; padding-right: 1rem; padding-top: .6rem;}
+    .block-container {padding-left: 1rem; padding-right: 1rem; padding-top: 4.5rem;}
     .cv-hero {padding: 1.2rem 1.1rem 1rem;}
+    .cv-kicker {font-size: .66rem; letter-spacing: .06em; white-space: nowrap;}
     .cv-veredicto {padding: 1rem; gap: .75rem;}
     .cv-icono {width: 2.5rem; height: 2.5rem; font-size: 1.3rem;}
     .cv-veredicto .cv-etiqueta {font-size: 1.1rem;}
