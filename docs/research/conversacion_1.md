@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Rol** | Estudiante universitaria/o de Comunicaciones para el Desarrollo (sin nombre, por acuerdo) |
-| **Fecha** | Noviembre de 2026 (semana del 5 al 10) |
+| **Fecha** | 10 de noviembre de 2026 (preguntas enviadas y respondidas por WhatsApp ese mismo día) |
 | **Canal** | Nota de voz de WhatsApp (1 audio, 4 min 35 s) |
 | **Consentimiento** | Sí, para tomar notas **anónimas** |
 | **Método** | Transcripción local con Whisper (`faster-whisper` large-v3-turbo, en español, sin enviar el audio a ningún servicio). La transcripción completa y el audio quedan fuera del repositorio. |

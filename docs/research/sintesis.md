@@ -1,6 +1,6 @@
 # Síntesis de las 3 conversaciones
 
-Tres estudiantes universitarios, entrevistados por WhatsApp en noviembre de 2026 con las mismas 5
+Tres estudiantes universitarios, entrevistados por WhatsApp el 10 de noviembre de 2026 con las mismas 5
 preguntas (notas anónimas, con consentimiento):
 
 | | Rol | Canal |

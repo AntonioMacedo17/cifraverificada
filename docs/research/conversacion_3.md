@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Rol** | Estudiante universitaria/o de Comunicación Audiovisual (sin nombre, por acuerdo) |
-| **Fecha** | Noviembre de 2026 (semana del 5 al 10) |
+| **Fecha** | 10 de noviembre de 2026 (preguntas enviadas y respondidas por WhatsApp ese mismo día) |
 | **Canal** | Texto por WhatsApp (respuestas escritas a las 5 preguntas) |
 | **Consentimiento** | Sí, para tomar notas **anónimas** |
 

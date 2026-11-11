@@ -53,7 +53,7 @@ ocultar una brecha. Eso define el producto más que el código.
 
 **Quién lo sufre.** Quien **publica** cifras sobre el Perú con poco tiempo para revisarlas: redacciones
 digitales, fact-checkers, ONG, comunicadores y estudiantes que producen contenido (podcasts, ensayos, posts).
-Y quien los lee, porque las cifras erradas circulan. Las [3 conversaciones](docs/research/sintesis.md)
+Y quien los lee, porque las cifras erradas circulan. Las [3 conversaciones](docs/research/sintesis.md) (10 de noviembre de 2026, por WhatsApp)
 coinciden en dónde aparecen: los tres entrevistados vieron cifras equivocadas o sin fuente en **redes
 sociales, medios digitales y blogs**.
 
