@@ -10,8 +10,6 @@ Tolerancia explícita (para el tipo "valor"; diferencia = afirmado - oficial):
 Para "mayor_que"/"menor_que" ("más del 20 %") se compara el dato oficial con el umbral; para "maximo"/"minimo"
 ("el departamento más pobre") se ordena el indicador entre los 25 departamentos.
 """
-from datetime import date
-
 import pandas as pd
 
 from app import fuentes
@@ -75,7 +73,7 @@ def clasificar(afirmado: float, oficial: float, tol: str) -> tuple[str, dict]:
 
 def _no_verificable(consulta: dict, motivo: str) -> dict:
     return {"veredicto": NO_VERIFICABLE, "motivo": motivo, "consulta": consulta,
-            "fecha_consulta": date.today().isoformat()}
+            "fecha_consulta": fuentes.fecha_consulta()}
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -132,7 +130,7 @@ def _verificar_bcrp(consulta: dict, en_vivo: bool) -> dict:
            "fuente": {"tipo": "BCRP", "codigo": codigo, "nombre": serie["nombre"], "origen": serie["origen"],
                       "fecha_datos": serie["fecha_datos"], "aviso": serie["aviso"], "url": serie["url_web"],
                       "url_api": serie["url_api"], "fuente_primaria": serie["fuente_primaria"]},
-           "serie": s, "fecha_consulta": date.today().isoformat()}
+           "serie": s, "fecha_consulta": fuentes.fecha_consulta()}
     res.update(_comparar(consulta, oficial, meta["tol"]))
     res["detras"] = _detras_bcrp(consulta["indicador"], s, per_usado, oficial, serie["unidad"])
     return res
@@ -192,7 +190,7 @@ def _verificar_enaho(consulta: dict) -> dict:
               "nombre": meta["etiqueta"], "origen": "agregados validados en data/enaho2024_indicadores.csv",
               "fecha_datos": "2024 (anual)", "aviso": None, "url": fuentes.URL_ENAHO}
     base = {"indicador": meta["etiqueta"], "consulta": consulta, "periodo_usado": "2024", "unidad": "%",
-            "fuente": fuente, "fecha_consulta": date.today().isoformat(), "enaho": df, "columna": col,
+            "fuente": fuente, "fecha_consulta": fuentes.fecha_consulta(), "enaho": df, "columna": col,
             "detras": _detras_enaho(df, col)}
     tipo = consulta.get("tipo") or "valor"
 

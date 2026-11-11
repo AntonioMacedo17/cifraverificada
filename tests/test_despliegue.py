@@ -58,3 +58,15 @@ def test_cifra_detras_con_unidad_y_dos_decimales():
     r2 = verificar({"indicador": "tipo_cambio", "periodo": "2024", "tipo": "valor", "valor_afirmado": 3.75,
                     "unidad": "S/ por US$"}, en_vivo=False)
     assert all(d["unidad"] == "S/ por US$" for d in r2["detras"])
+
+
+def test_fecha_de_consulta_en_hora_de_lima():
+    """En la nube el servidor corre en UTC: a las 21:00 de Lima ya es el día siguiente en UTC."""
+    from datetime import datetime, timedelta, timezone
+
+    from app import fuentes
+    texto = fuentes.fecha_consulta()
+    assert texto.endswith("(hora de Lima)")
+    lima = datetime.now(timezone(timedelta(hours=-5)))  # Perú no usa horario de verano
+    assert texto.startswith(lima.strftime("%Y-%m-%d"))
+    assert fuentes.hoy_lima() == lima.date().isoformat()

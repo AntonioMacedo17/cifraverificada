@@ -12,8 +12,9 @@ import json
 import math
 import re
 import time
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 import pandas as pd
@@ -28,6 +29,23 @@ API = "https://estadisticas.bcrp.gob.pe/estadisticas/series/api"
 WEB = "https://estadisticas.bcrp.gob.pe/estadisticas/series"
 WEB_FRECUENCIA = {"diaria": "diarias", "mensual": "mensuales", "trimestral": "trimestrales", "anual": "anuales"}
 URL_ENAHO = "https://proyectos.inei.gob.pe/microdatos/"
+
+# Fechas siempre en hora de Lima: el servidor de la nube corre en UTC (a las 21:00 de Lima ya es el día siguiente).
+LIMA = ZoneInfo("America/Lima")
+
+
+def ahora_lima() -> datetime:
+    return datetime.now(LIMA)
+
+
+def hoy_lima() -> str:
+    """Fecha de hoy en Lima, AAAA-MM-DD."""
+    return ahora_lima().date().isoformat()
+
+
+def fecha_consulta() -> str:
+    """Fecha y hora de la consulta en Lima, p. ej. '2026-11-10 21:00 (hora de Lima)'."""
+    return ahora_lima().strftime("%Y-%m-%d %H:%M") + " (hora de Lima)"
 REINTENTOS = 3
 ESPERA_BASE = 1.0
 MESES = {"ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8,
@@ -152,7 +170,7 @@ def obtener_serie(codigo: str, en_vivo: bool = True) -> dict:
     aviso = None
     if en_vivo:
         try:
-            datos, origen, fecha = descargar_serie(codigo), "API del BCRP en vivo", date.today().isoformat()
+            datos, origen, fecha = descargar_serie(codigo), "API del BCRP en vivo", hoy_lima()
         except FuenteError as e:
             aviso = str(e)
             en_vivo = False
@@ -170,7 +188,7 @@ def leer_enaho() -> pd.DataFrame:
 
 
 def crear_snapshot() -> None:
-    snap = {"fecha_descarga": date.today().isoformat(),
+    snap = {"fecha_descarga": hoy_lima(),
             "fuente": "API de series estadísticas del BCRP (estadisticas.bcrp.gob.pe)",
             "urls": {c: url_api(c) for c in SERIES}, "series": {}}
     for codigo in SERIES:

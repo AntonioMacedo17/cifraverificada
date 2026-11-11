@@ -15,6 +15,7 @@ import os
 import re
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -134,7 +135,7 @@ def _registrar(etapa: str, frase: str, uso: dict) -> None:
             w = csv.writer(f)
             if nuevo:
                 w.writerow(["fecha", "etapa", "modelo", "tokens_entrada", "tokens_salida", "tokens_total", "frase"])
-            w.writerow([datetime.now().isoformat(timespec="seconds"), etapa, uso["modelo"], uso["entrada"],
+            w.writerow([datetime.now(ZoneInfo("America/Lima")).isoformat(timespec="seconds"), etapa, uso["modelo"], uso["entrada"],
                         uso["salida"], uso["total"], frase[:200]])
     except OSError:
         pass          # en la nube el disco puede ser de solo lectura: el registro no debe romper la app
