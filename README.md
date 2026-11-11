@@ -117,7 +117,7 @@ del 50 %, y se contrastan con la ENAHO.
 ## 6. Demo
 
 **URL pública:** **https://cifraverificada.streamlit.app** (Streamlit Community Cloud).
-**Video de respaldo:** (link pendiente)
+**Video de respaldo (76 s):** https://youtu.be/HsRFOuhdgI4
 
 ### Capturas del flujo
 
